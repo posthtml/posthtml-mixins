@@ -1,0 +1,35 @@
+{
+  "name": "posthtml-mixins",
+  "version": "2.1.0",
+  "description": "Mixins for PostHTML",
+  "license": "MIT",
+  "repository": "mrmlnc/posthtml-mixins",
+  "author": {
+    "name": "Denis Malinochkin",
+    "url": "canonium.com"
+  },
+  "engines": {
+    "node": ">=4.0.0"
+  },
+  "main": "./out/plugin.js",
+  "typings": "./out/plugin.d.ts",
+  "devDependencies": {
+    "mocha": "^3.1.2",
+    "typescript": "^2.0.9",
+    "tslint": "^3.15.1",
+    "posthtml": "0.9.1",
+    "posthtml-exp": "0.9.0"
+  },
+  "files": [
+    "out/plugin.js",
+    "out/plugin.d.ts"
+  ],
+  "scripts": {
+    "clean": "rimraf out",
+    "lint": "tslint src/**/*.ts",
+    "compile": "tsc",
+    "test": "mocha out/**/*.spec.js",
+    "build": "npm run clean && npm run lint&& npm run compile && npm run test ",
+    "watch": "npm run clean && npm run lint && npm run compile -- --watch"
+  }
+}
