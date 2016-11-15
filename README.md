@@ -2,6 +2,8 @@
 
 > A [PostHTML](https://github.com/posthtml/posthtml) plugin adds support for Mixins. Mixins allow you to create reusable blocks of code.
 
+[![Travis Status](https://travis-ci.org/mrmlnc/posthtml-mixins.svg?branch=master)](https://travis-ci.org/mrmlnc/posthtml-mixins)
+
 ## Install
 
 ```
