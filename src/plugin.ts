@@ -1,19 +1,11 @@
 'use strict';
 
-import * as posthtml from 'posthtml';
+import { INode, IAttributes, ITree } from 'posthtml';
 import expandPlaceholder from 'expand-placeholder';
 
 const { walk } = require('posthtml/lib/api');
 
 let delimiters: string[];
-
-interface INode extends posthtml.INode {
-	// :)
-}
-
-interface IAttributes extends posthtml.IAttributes {
-	// :)
-}
 
 export interface IOptions {
 	// Array containing beginning and ending delimiters for escaped locals
@@ -34,7 +26,7 @@ interface IMixinStorage {
 	[name: string]: IMixin[];
 }
 
-function makeParams(attrs: posthtml.IAttributes): IAttribute[] {
+function makeParams(attrs: IAttributes): IAttribute[] {
 	const params: IAttribute[] = [];
 	Object.keys(attrs).forEach((attr) => {
 		if (attr === 'name') {
@@ -165,7 +157,7 @@ export default function posthtmlMixins(options?: IOptions) {
 
 	delimiters = opts.delimiters;
 
-	return (tree?: posthtml.ITree) => {
+	return (tree?: ITree) => {
 		tree.match({ tag: 'mixin' }, (node) => {
 			// Skip tag if it doesn't contain attributes or `name` attribute
 			if (!node.attrs || (node.attrs && !node.attrs.name)) {
@@ -175,6 +167,17 @@ export default function posthtmlMixins(options?: IOptions) {
 			// Name of Mixin
 			const name = node.attrs.name;
 
+			// Mixin reference
+			if (!node.content || (node.content && (node.content.length === 0 || (node.content.length === 1 && node.content[0] === '')))) {
+				// Mixin with specified name is exist?
+				if (!node.content && !storage[name]) {
+					throw new Error(`The Mixin with name "${name}" not exist`);
+				}
+
+				return makeMixinReference(node, storage);
+			}
+
+			// Mixin definition
 			if (node.content && node.content.length !== 0) {
 				if (!storage[name]) {
 					storage[name] = [];
@@ -188,13 +191,6 @@ export default function posthtmlMixins(options?: IOptions) {
 					attrs: null
 				};
 			}
-
-			// Mixin with specified name is exist?
-			if (!node.content && !storage[name]) {
-				throw new Error(`The Mixin with name "${name}" not exist`);
-			}
-
-			return makeMixinReference(node, storage);
 		});
 
 		return tree;

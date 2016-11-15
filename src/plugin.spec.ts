@@ -4,6 +4,7 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 
 import * as posthtml from 'posthtml';
+import * as sugarml from 'sugarml';
 import * as expressions from 'posthtml-exp';
 import * as include from 'posthtml-include';
 
@@ -21,9 +22,10 @@ function readFile(filepath: string): Promise<string> {
 	});
 }
 
-function assertCase(source: string): Promise<any> {
+function assertCase(source: string, sml = false): Promise<any> {
+	const ext = sml ? '.sml' : '.html';
 	const files = [
-		readFile('test/' + source + '.html'),
+		readFile('test/' + source + ext),
 		readFile('test/' + source + '.expected.html')
 	];
 
@@ -33,10 +35,8 @@ function assertCase(source: string): Promise<any> {
 			posthtmlMixins(),
 			expressions()
 		])
-			.use()
-			.process(data[0])
+			.process(data[0], sml ? { parser: sugarml } : {})
 			.then((result) => {
-				// console.log(result.html);
 				assert.equal(result.html, data[1]);
 			});
 	});
@@ -66,6 +66,10 @@ describe('PostHTML Mixins', () => {
 
 	it('Usage with posthtml-includes', () => {
 		return assertCase('includes');
+	});
+
+	it('Usage with SugarML', () => {
+		return assertCase('basic-sml', true);
 	});
 
 });

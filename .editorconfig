@@ -17,3 +17,4 @@ indent_size = 2
 
 [test/**]
 trim_trailing_whitespace = false
+insert_final_newline = false
