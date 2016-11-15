@@ -53,7 +53,7 @@ We support parameters for Mixins inside tags and in attributes.
 </div>
 ```
 
-#### Default values
+### Default values
 
 We support default values for parameters (order is unimportant).
 
@@ -73,7 +73,7 @@ We support default values for parameters (order is unimportant).
 </div>
 ```
 
-#### Mixin reloading
+### Mixin reloading
 
 We support Mixin reloading when the Mixin may have the same name but a different number of parameters.
 
