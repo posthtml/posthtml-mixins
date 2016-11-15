@@ -31,6 +31,13 @@ posthtml([ mixins() ])
 
 Array containing beginning and ending delimiters for locals.
 
+For example:
+
+  * `['{', '}']` - `{ key }`
+  * `['${', '}']` - `${ key }`
+  * `['%', '%']` - `%key%`
+  * `['%', '']` - `%key`
+
 ## Features
 
 ### Parameters
