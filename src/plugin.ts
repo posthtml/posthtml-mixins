@@ -1,47 +1,77 @@
 'use strict';
 
 import * as posthtml from 'posthtml';
+import expandPlaceholder from 'expand-placeholder';
+
+const { walk } = require('posthtml/lib/api');
+
+let delimiters: string[];
+
+interface INode extends posthtml.INode {
+	// :)
+}
+
+interface IAttributes extends posthtml.IAttributes {
+	// :)
+}
+
+export interface IOptions {
+	// Array containing beginning and ending delimiters for escaped locals
+	delimiters: string[];
+}
+
+interface IAttribute {
+	name: string;
+	value: string;
+}
 
 interface IMixin {
-	params: { name: string; value: string; }[];
-	body: (string | posthtml.INode)[];
+	params: IAttribute[];
+	body: (string | INode)[];
 }
 
-interface IMixins {
-	[name: string]: IMixin;
+interface IMixinStorage {
+	[name: string]: IMixin[];
 }
 
-function traverse(tree, cb) {
-	if (Array.isArray(tree)) {
-		for (let i = 0; i < tree.length; i++) {
-			tree[i] = traverse(cb(tree[i]), cb);
-		};
-	} else if (tree && typeof tree === 'object' && tree.hasOwnProperty('content')) {
-		traverse(tree.content, cb);
-	}
-
-	return tree;
-}
-
-function replaceExpression(str, params) {
-	const match = /({{\s*([^{{]+)\s*}})/g.exec(str);
-	if (match) {
-		const paramName = match[2].trim();
-
-		if (params[paramName]) {
-			return str.replace(match[1], params[paramName]);
+function makeParams(attrs: posthtml.IAttributes): IAttribute[] {
+	const params: IAttribute[] = [];
+	Object.keys(attrs).forEach((attr) => {
+		if (attr === 'name') {
+			return;
 		}
-	}
 
-	return str;
+		params.push({
+			name: attr,
+			value: attrs[attr] !== '' ? attrs[attr] : null
+		});
+	});
+
+	return params;
 }
 
-function replaceExpressions(tree: (string | posthtml.INode)[], params) {
-	return traverse(tree, (node) => {
-		if (typeof node === 'object' && node.attrs) {
-			Object.keys(node.attrs).forEach((name) => {
-				node.attrs[name] = replaceExpression(node.attrs[name], params);
-			});
+function makeMixinDefinition(node: INode): IMixin {
+	return {
+		params: makeParams(node.attrs),
+		body: node.content
+	};
+}
+
+function replaceExpression(str: string, params: IAttributes): string {
+	return expandPlaceholder(str, params, {
+		opening: delimiters[0],
+		closing: delimiters[1]
+	});
+}
+
+function replaceExpressions(tree: INode[], params: IAttributes): INode[] {
+	return walk.call(tree, (node) => {
+		if (typeof node === 'object') {
+			if (node.attrs) {
+				Object.keys(node.attrs).forEach((name) => {
+					node.attrs[name] = replaceExpression(node.attrs[name], params);
+				});
+			}
 		} else if (typeof node === 'string') {
 			node = replaceExpression(node, params);
 		}
@@ -50,35 +80,107 @@ function replaceExpressions(tree: (string | posthtml.INode)[], params) {
 	});
 }
 
-export function posthtmlMixins(options?) {
+function makeMixinReference(node: INode, storage: IMixinStorage): INode {
+	const name = node.attrs.name;
+	const referenceParams = makeParams(node.attrs);
 
-	const mixins: IMixins = {};
+	// Try to find Mixin with specified parameters
+	let mixin: IMixin;
+	const keys = Object.keys(storage);
+	for (let i = 0; i < keys.length; i++) {
+		const key = keys[i];
+		if (key !== name) {
+			continue;
+		}
+
+		// Each Mixin can have multiple reloadings, depending on the number of parameters
+		const setOfMixins = storage[key];
+		for (let j = setOfMixins.length - 1; j >= 0; j--) {
+			const maybe = setOfMixins[j];
+
+			let status = true;
+			if (maybe.params.length !== 0 && maybe.params.length !== referenceParams.length) {
+				// Check balance of arguments. If Mixin has free parameters without default values then skip this Mixin
+				const freeParams = maybe.params.filter((param) => {
+					for (let k = 0; k < referenceParams.length; k++) {
+						if (referenceParams[k].name === param.name || param.value !== null) {
+							return false;
+						}
+					}
+
+					return true;
+				});
+
+				if (freeParams.length !== 0) {
+					status = false;
+				}
+			}
+
+			if (status) {
+				mixin = maybe;
+				break;
+			}
+		}
+	}
+
+	if (!mixin) {
+		throw new Error(`The Mixin with name "${name}" not exist`);
+	}
+
+	// Prepare parameters to call Mixin
+	const callParams: IAttributes = {};
+	mixin.params.forEach((param) => {
+		if (referenceParams.length === 0) {
+			callParams[param.name] = param.value;
+			return;
+		}
+
+		for (let i = 0; i < referenceParams.length; i++) {
+			const refParam = referenceParams[i];
+			if (param.name === refParam.name) {
+				callParams[param.name] = refParam.value;
+			} else {
+				callParams[refParam.name] = refParam.value;
+			}
+		}
+
+		if (!callParams[param.name]) {
+			callParams[param.name] = param.value;
+		}
+	});
+
+	return {
+		tag: false,
+		content: replaceExpressions(<INode[]>mixin.body, callParams),
+		attrs: null
+	};
+}
+
+export default function posthtmlMixins(options?: IOptions) {
+	const storage: IMixinStorage = {};
+
+	const opts = Object.assign(<IOptions>{
+		delimiters: ['{{', '}}']
+	}, options);
+
+	delimiters = opts.delimiters;
 
 	return (tree?: posthtml.ITree) => {
 		tree.match({ tag: 'mixin' }, (node) => {
+			// Skip tag if it doesn't contain attributes or `name` attribute
+			if (!node.attrs || (node.attrs && !node.attrs.name)) {
+				return node;
+			}
+
+			// Name of Mixin
 			const name = node.attrs.name;
 
 			if (node.content && node.content.length !== 0) {
-				const params = [];
-				Object.keys(node.attrs).forEach((attr) => {
-					let value = null;
-					if (attr === 'name') {
-						return;
-					}
-					if (node.attrs[attr] !== '') {
-						value = node.attrs[attr];
-					}
+				if (!storage[name]) {
+					storage[name] = [];
+				}
 
-					params.push({
-						name: attr,
-						value
-					});
-				});
-
-				mixins[name] = {
-					params,
-					body: node.content
-				};
+				storage[name].push(makeMixinDefinition(node));
 
 				return {
 					tag: false,
@@ -87,75 +189,14 @@ export function posthtmlMixins(options?) {
 				};
 			}
 
-			const referenceParams = [];
-			Object.keys(node.attrs).forEach((attr) => {
-				if (attr === 'name') {
-					return;
-				}
-
-				referenceParams.push({
-					name: attr,
-					value: node.attrs[attr]
-				});
-			});
-
-			let mixin: IMixin;
-			const keys = Object.keys(mixins);
-
-			for (let i = 0; i < keys.length; i++) {
-				const key = keys[i];
-				if (key !== name) {
-					return;
-				}
-
-				const maybeMixin = mixins[key];
-				const paramsLength = maybeMixin.params.length;
-
-				// Check balance of arguments. If Mixin has free parameters without default values then skip this Mixin
-				let mixinStatus = true;
-				for (let j = referenceParams.length; j < paramsLength; j++) {
-					const param = maybeMixin.params[j];
-
-					if (!param.value) {
-						mixinStatus = false;
-						break;
-					}
-				}
-
-				if (mixinStatus) {
-					mixin = maybeMixin;
-					break;
-				}
+			// Mixin with specified name is exist?
+			if (!node.content && !storage[name]) {
+				throw new Error(`The Mixin with name "${name}" not exist`);
 			}
 
-			if (!mixin) {
-				console.error('Mixin not found! (WIP)');
-				return node;
-			}
-
-			const callParams = {};
-			mixin.params.forEach((param) => {
-				if (referenceParams.length === 0) {
-					callParams[param.name] = param.value;
-					return;
-				}
-
-				for (let i = 0; i < referenceParams.length; i++) {
-					if (param.name === referenceParams[i].name) {
-						callParams[param.name] = referenceParams[i].value;
-						break;
-					}
-				}
-			});
-
-			return {
-				tag: false,
-				content: replaceExpressions(<posthtml.INode[]>mixin.body, callParams),
-				attrs: null
-			};
+			return makeMixinReference(node, storage);
 		});
 
 		return tree;
 	};
-
 }

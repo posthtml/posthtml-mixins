@@ -1,92 +1,114 @@
-# posthtml-mixins (demo, only for show idea)
+# posthtml-mixins
 
-```js
-import { posthtmlMixins } from './plugin';
+> A [PostHTML](https://github.com/posthtml/posthtml) plugin adds support for Mixins. Mixins allow you to create reusable blocks of code.
 
-posthtml()
-  .use(posthtmlMixins())
-  .process(html)
-  .then(console.log);
+## Install
+
+```
+$ npm i -D posthtml-mixins
 ```
 
-## Basic usage
+## Usage
 
-### Input
+```js
+const { readFileSync } = require('fs');
+
+const posthtml = require('posthtml');
+const mixins = require('posthtml-mixins');
+
+const html = readFileSync('index.html');
+posthtml([ mixins() ])
+  .process(html)
+  .then((result) => console.log(result.html))
+```
+
+## Options
+
+#### delimiters
+
+  * Type: `String[]`
+  * Default: `['{{', '}}']`
+
+Array containing beginning and ending delimiters for locals.
+
+## Features
+
+### Parameters
+
+We support parameters for Mixins inside tags and in attributes.
+
+```html
+<mixin name="say" class from>
+  <p class="{{ class }}">Hello from {{ from }}!</p>
+</mixin>
+
+<div>
+  <mixin name="say" class="hello" from="me"></mixin>
+</div>
+```
+
+```html
+<div>
+  <p class="hello">Hello from me!</p>
+</div>
+```
+
+#### Default values
+
+We support default values for parameters (order is unimportant).
+
+```html
+<mixin name="say" class from="me">
+  <p class="{{ class }}">Hello from {{ from }}!</p>
+</mixin>
+
+<div>
+  <mixin name="say" class="hello"></mixin>
+</div>
+```
+
+```html
+<div>
+  <p class="hello">Hello from me!</p>
+</div>
+```
+
+#### Mixin reloading
+
+We support Mixin reloading when the Mixin may have the same name but a different number of parameters.
 
 ```html
 <mixin name="say" from>
   <p>Hello from {{ from }}!</p>
 </mixin>
 
-<div class="c-splashs">
-  <mixin name="say" from="me"></mixin>
-</div>
-```
-
-### Output
-
-```html
-<div class="c-splashs">
-
-  <p>Hello from me!</p>
-
-</div>
-```
-
-## Usage with default values
-
-### Input
-
-```html
-<mixin name="say" from="PostHTML">
-  <p>Hello from {{ from }}!</p>
+<mixin name="say">
+  <p>Hello!</p>
 </mixin>
 
-<div class="c-splashs">
+<div>
   <mixin name="say"></mixin>
 </div>
-```
-
-### Output
-
-```html
-<div class="c-splashs">
-
-  <p>Hello from PostHTML!</p>
-
-</div>
-```
-
-## Usage with posthtml-exp
-
-### Input
-
-```html
-<mixin name="say" from items>
-  <p>Hello from {{ from }}!</p>
-  <each loop="item in {{ items }}">
-    <p>{{item}}</p>
-  </each>
-</mixin>
 
 <div>
-  <mixin name="say" from="me" items="['a', 'b', 'c']"></mixin>
+  <mixin name="say" from="mixin"></mixin>
 </div>
 ```
-
-### Output
 
 ```html
 <div>
+  <p>Hello!</p>
+</div>
 
-  <p>Hello from me!</p>
-
-    <p>a</p>
-
-    <p>b</p>
-
-    <p>c</p>
-
-
+<div>
+  <p>Hello from mixin!</p>
 </div>
 ```
+
+## Changelog
+
+See the [Releases section of our GitHub project](https://github.com/mrmlnc/posthtml-mixins/releases) for changelogs for each release version.
+
+## License
+
+This software is released under the terms of the MIT license.

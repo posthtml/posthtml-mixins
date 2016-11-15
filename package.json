@@ -1,7 +1,7 @@
 {
   "name": "posthtml-mixins",
-  "version": "2.1.0",
-  "description": "Mixins for PostHTML",
+  "version": "1.0.0",
+  "description": "Mixins (reusable blocks of code) for PostHTML",
   "license": "MIT",
   "repository": "mrmlnc/posthtml-mixins",
   "author": {
@@ -11,16 +11,20 @@
   "engines": {
     "node": ">=4.0.0"
   },
-  "main": "./out/plugin.js",
   "typings": "./out/plugin.d.ts",
   "devDependencies": {
     "mocha": "^3.1.2",
     "typescript": "^2.0.9",
     "tslint": "^3.15.1",
     "posthtml": "0.9.1",
-    "posthtml-exp": "0.9.0"
+    "posthtml-exp": "0.9.0",
+    "posthtml-include": "1.1.0"
+  },
+  "dependencies": {
+    "expand-placeholder": "^1.0.2"
   },
   "files": [
+    "index.js",
     "out/plugin.js",
     "out/plugin.d.ts"
   ],

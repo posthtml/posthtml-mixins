@@ -4,11 +4,13 @@ declare module "posthtml" {
 
 	namespace posthtml {
 
+		interface IAttributes {
+			[name: string]: string;
+		}
+
 		interface IExpressionObject {
 			tag?: string;
-			attrs?: {
-				[name: string]: string;
-			};
+			attrs?: IAttributes;
 		}
 
 		interface INode {

@@ -1,9 +1,9 @@
 declare module "posthtml-exp" {
 
-    function exp();
+	function exp();
 
-    namespace exp { }
+	namespace exp { }
 
-    export = exp;
+	export = exp;
 
 }

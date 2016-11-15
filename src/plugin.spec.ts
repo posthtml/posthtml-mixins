@@ -1,71 +1,71 @@
 'use strict';
 
 import * as assert from 'assert';
+import * as fs from 'fs';
 
 import * as posthtml from 'posthtml';
-import * as exp from 'posthtml-exp';
+import * as expressions from 'posthtml-exp';
+import * as include from 'posthtml-include';
 
-import { posthtmlMixins } from './plugin';
+import posthtmlMixins from './plugin';
+
+function readFile(filepath: string): Promise<string> {
+	return new Promise((resolve, reject) => {
+		fs.readFile(filepath, (err, buf) => {
+			if (err) {
+				return reject(err);
+			}
+
+			resolve(buf.toString());
+		});
+	});
+}
+
+function assertCase(source: string): Promise<any> {
+	const files = [
+		readFile('test/' + source + '.html'),
+		readFile('test/' + source + '.expected.html')
+	];
+
+	return Promise.all(files).then((data) => {
+		return posthtml([
+			include(),
+			posthtmlMixins(),
+			expressions()
+		])
+			.use()
+			.process(data[0])
+			.then((result) => {
+				// console.log(result.html);
+				assert.equal(result.html, data[1]);
+			});
+	});
+}
 
 describe('PostHTML Mixins', () => {
 
 	it('Basic usage', () => {
-		const html = [
-			'<mixin name="say" from>',
-			'  <p>Hello from {{ from }}!</p>',
-			'</mixin>',
-			'<div>',
-			'  <mixin name="say" from="me"></mixin>',
-			'</div>'
-		].join('\n');
-
-		return posthtml()
-			.use(posthtmlMixins())
-			.process(html)
-			.then((result) => {
-				assert.equal(result.html, '\n<div>\n  \n  <p>Hello from me!</p>\n\n</div>');
-			});
+		return assertCase('basic');
 	});
 
-	it('Usage with default value', () => {
-		const html = [
-			'<mixin name="say" from="me">',
-			'  <p>Hello from {{ from }}!</p>',
-			'</mixin>',
-			'<div>',
-			'  <mixin name="say"></mixin>',
-			'</div>'
-		].join('\n');
+	it('Basic usage with default value', () => {
+		return assertCase('basic-default');
+	});
 
-		return posthtml()
-			.use(posthtmlMixins())
-			.process(html)
-			.then((result) => {
-				assert.equal(result.html, '\n<div>\n  \n  <p>Hello from me!</p>\n\n</div>');
-			});
+	it('Basic usage with parameters in attributes', () => {
+		return assertCase('parameters');
+	});
+
+	it('Basic usage with reloading', () => {
+		return assertCase('reloading');
 	});
 
 	it('Usage with posthtml-expressions', () => {
-		const html = [
-			'<mixin name="say" from items>',
-			'  <p>Hello from {{ from }}!</p>',
-			'  <each loop="item in {{ items }}">',
-			'    <p>{{item}}</p>',
-			'  </each>',
-			'</mixin>',
-			'<div>',
-			`  <mixin name="say" from="me" items="['a', 'b', 'c']"></mixin>`,
-			'</div>'
-		].join('\n');
+		return assertCase('expressions');
+	});
 
-		return posthtml([
-			posthtmlMixins(),
-			exp()
-		])
-			.process(html)
-			.then((result) => {
-				assert.equal(result.html, '\n<div>\n  \n  <p>Hello from me!</p>\n  \n    <p>a</p>\n  \n    <p>b</p>\n  \n    <p>c</p>\n  \n\n</div>');
-			});
+	it('Usage with posthtml-includes', () => {
+		return assertCase('includes');
 	});
 
 });

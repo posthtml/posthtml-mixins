@@ -1,0 +1,10 @@
+<mixin name="say" from items>
+	<p>Hello from {{ from }}!</p>
+	<each loop="item in {{ items }}">
+		<p>{{item}}</p>
+	</each>
+</mixin>
+
+<div>
+	<mixin name="say" from="me" items="['a', 'b', 'c']"></mixin>
+</div>
