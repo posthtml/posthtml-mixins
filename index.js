@@ -1,3 +1,3 @@
-const plugin = require('./out/expand').default;
+const plugin = require('./out/plugin').default;
 module.exports = plugin;
 module.exports.default = plugin;
