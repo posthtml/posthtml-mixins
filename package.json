@@ -1,6 +1,6 @@
 {
   "name": "posthtml-mixins",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Mixins (reusable blocks of code) for PostHTML",
   "license": "MIT",
   "repository": "mrmlnc/posthtml-mixins",
